@@ -1,0 +1,20 @@
+# OpenTracker module manifest (core: docs/PLAN_3X.md §7.2, tools/profile.py).
+id      = "ECHO"
+name    = "Echo"
+version = "1.0.0"
+api     = 1
+entry   = "echoModule"                  # ot::mod::IModule& ot::mod::echoModule()
+caps    = ["masterInsert", "section", "page"]
+sources = ["echo.cpp", "echo_module.cpp"]
+tests   = ["echo_test.cpp"]
+
+flash_max_bytes   = 6000
+sram_audio_bytes  = 0                 # state only; the line is in the SDRAM
+sdram_bytes       = 49152             # the line: 24,576 int16 at half rate (ModuleHost::sdram)
+fastrun_bytes     = 0
+cpu_insn_per_unit = 9000              # one stereo block (bench: echo.unit)
+max_units         = 1
+bench             = "echo"
+section_tag       = 0x4006            # (0x4005 is a test fixture's)
+bench_sources     = ["echo_bench.cpp"]  # in bench/; linked into the core's audio_bench
+bench_entry       = "echoBench"

@@ -1,0 +1,20 @@
+# OpenTracker module manifest (core: docs/PLAN_3X.md §7.2, tools/profile.py).
+id      = "DIRT"
+name    = "Dirt"
+version = "1.0.0"
+api     = 1
+entry   = "dirtModule"                  # ot::mod::IModule& ot::mod::dirtModule()
+caps    = ["masterInsert", "section", "page"]
+sources = ["dirt.cpp", "dirt_module.cpp"]
+tests   = ["dirt_test.cpp"]
+
+flash_max_bytes   = 4500
+sram_audio_bytes  = 0                 # no buffers (filter / hold state only)
+sdram_bytes       = 0
+fastrun_bytes     = 0
+cpu_insn_per_unit = 9000              # one stereo block (bench: dirt.unit)
+max_units         = 1
+bench             = "dirt"
+section_tag       = 0x4004
+bench_sources     = ["dirt_bench.cpp"]  # in bench/; linked into the core's audio_bench
+bench_entry       = "dirtBench"

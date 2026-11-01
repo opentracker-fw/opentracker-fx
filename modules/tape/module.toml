@@ -1,0 +1,20 @@
+# OpenTracker module manifest (core: docs/PLAN_3X.md §7.2, tools/profile.py).
+id      = "TAPE"
+name    = "Tape"
+version = "1.0.0"
+api     = 1
+entry   = "tapeModule"                  # ot::mod::IModule& ot::mod::tapeModule()
+caps    = ["masterInsert", "section", "page"]
+sources = ["tape.cpp", "tape_module.cpp"]
+tests   = ["tape_test.cpp"]
+
+flash_max_bytes   = 4400
+sram_audio_bytes  = 1280              # two 256-frame int16 delay lines + state
+sdram_bytes       = 0
+fastrun_bytes     = 0
+cpu_insn_per_unit = 15000             # one stereo block (bench: tape.unit ~13.9k)
+max_units         = 1
+bench             = "tape"
+section_tag       = 0x4001
+bench_sources     = ["tape_bench.cpp"]  # in bench/; linked into the core's audio_bench
+bench_entry       = "tapeBench"

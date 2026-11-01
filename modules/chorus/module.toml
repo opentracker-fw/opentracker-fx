@@ -1,0 +1,20 @@
+# OpenTracker module manifest (core: docs/PLAN_3X.md §7.2, tools/profile.py).
+id      = "CHOR"
+name    = "Chorus"
+version = "1.0.0"
+api     = 1
+entry   = "chorusModule"                # ot::mod::IModule& ot::mod::chorusModule()
+caps    = ["masterInsert", "section", "page"]
+sources = ["chorus.cpp", "chorus_module.cpp"]
+tests   = ["chorus_test.cpp"]
+
+flash_max_bytes   = 5200
+sram_audio_bytes  = 1024              # the int16 delay line
+sdram_bytes       = 0
+fastrun_bytes     = 0
+cpu_insn_per_unit = 12000             # one stereo block (bench: chor.unit ~10.6k)
+max_units         = 1
+bench             = "chor"
+section_tag       = 0x4002
+bench_sources     = ["chorus_bench.cpp"]
+bench_entry       = "chorusBench"

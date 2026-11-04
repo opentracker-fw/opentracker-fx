@@ -1,0 +1,20 @@
+# OpenTracker module manifest (core: docs/PLAN_3X.md §7.2, tools/profile.py).
+id      = "LOFI"
+name    = "LoFi"
+version = "1.0.0"
+api     = 1
+entry   = "lofiModule"                  # ot::mod::IModule& ot::mod::lofiModule()
+caps    = ["masterInsert", "section", "page"]
+sources = ["lofi.cpp", "lofi_module.cpp"]
+tests   = ["lofi_test.cpp"]
+
+flash_max_bytes   = 5500 
+sram_audio_bytes  = 0                 # no buffers (filter / hold state only)
+sdram_bytes       = 0
+fastrun_bytes     = 0
+cpu_insn_per_unit = 12500             # one stereo block (bench: lofi.unit 12.1k at its worst: stereo, the DAC every frame; plan 12,000: owner decision)
+max_units         = 1
+bench             = "lofi"
+section_tag       = 0x4007            # (0x4001 TAPE, 0x4002 CHOR, 0x4003 BBDC, 0x4004 DIRT, 0x4005 a test's, 0x4006 ECHO)
+bench_sources     = ["lofi_bench.cpp"]  # in bench/; linked into the core's audio_bench
+bench_entry       = "lofiBench"

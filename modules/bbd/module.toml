@@ -1,0 +1,20 @@
+# OpenTracker module manifest (core: docs/PLAN_3X.md §7.2, tools/profile.py).
+id      = "BBDC"
+name    = "BBD chorus"
+version = "1.0.0"
+api     = 1
+entry   = "bbdcModule"                  # ot::mod::IModule& ot::mod::bbdcModule()
+caps    = ["masterInsert", "section", "page"]
+sources = ["bbdc.cpp", "bbdc_module.cpp"]
+tests   = ["bbdc_test.cpp"]
+
+flash_max_bytes   = 3400
+sram_audio_bytes  = 512               # the int16 delay line
+sdram_bytes       = 0
+fastrun_bytes     = 0
+cpu_insn_per_unit = 12000             # one stereo block (bench: bbdc.unit ~11.1k)
+max_units         = 1
+bench             = "bbdc"
+section_tag       = 0x4003
+bench_sources     = ["bbdc_bench.cpp"]
+bench_entry       = "bbdcBench"

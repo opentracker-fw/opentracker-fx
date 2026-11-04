@@ -4,11 +4,12 @@ name    = "Dirt"
 version = "1.0.0"
 api     = 1
 entry   = "dirtModule"                  # ot::mod::IModule& ot::mod::dirtModule()
-caps    = ["masterInsert", "section", "page"]
+caps    = ["masterInsert", "section", "page", "effect"]
+effects = ["DRIV"]                      # per-instance effects (IModule::effect)
 sources = ["dirt.cpp", "dirt_module.cpp"]
 tests   = ["dirt_test.cpp"]
 
-flash_max_bytes   = 4500
+flash_max_bytes   = 4800              # measured 4,793 B: the Drive effect +367 B
 sram_audio_bytes  = 0                 # no buffers (filter / hold state only)
 sdram_bytes       = 0
 fastrun_bytes     = 0

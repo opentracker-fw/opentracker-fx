@@ -14,7 +14,7 @@ namespace {
 
 using audio::dirt::Params;
 
-const ModuleInfo kInfo = {"DIRT", kModuleApi, 100, "Dirt", kCapMasterInsert | kCapSection | kCapPage, 0, 0, 0, 9000, 1};
+const ModuleInfo kInfo = {"DIRT", kModuleApi, 100, "Dirt", kCapMasterInsert | kCapSection | kCapPage | kCapEffect, 0, 0, 0, 9000, 1};
 
 audio::dirt::Dirt gDirt;
 bool gDirty = false;
@@ -95,6 +95,7 @@ public:
     const ModuleInfo& info() const override { return kInfo; }
     bool attach(ModuleHost&) override { return true; }
     audio::IMasterInsert* masterInsert() override { return &gDirt; }
+    audio::IEffect* effect(int i) override { return i == 0 ? &audio::dirt::gDriveEffect : nullptr; }
     IProjectSection* section() override { return &gSection; }
     IModulePage* page() override { return &gPage; }
 };

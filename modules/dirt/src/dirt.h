@@ -41,23 +41,45 @@ float shape(uint8_t type, float x);
 // Names of the types (the page).
 extern const char* const kTypeName[kTypes];
 
+// One instance's state (all zero = fresh: the gains start at 1, no type yet).
+struct Inst {
+    float wet;            // the wet amount the last block ended on
+    float pre, post;      // pre-gain / make-up the last block ended on (fresh: 1)
+    float hold[2], lp[2], dc[2];
+    uint32_t cnt;         // frames left of the held value
+    uint8_t type1;        // the type the last block ran + 1 (0: none; a change crossfades)
+};
+// One block of an instance (p clamped); false (no tail).
+bool run(Inst& s, const Params& p, float* l, float* r, uint32_t n);
+
 class Dirt final : public IMasterInsert {
 public:
     // Main loop: takes effect at the next block (one-block hand-over).
     void setParams(const Params& p);
     Params params() const { return pub_[cur_]; }
-    void reset();
+    void reset() { st_ = Inst{}; }
     bool process(float* l, float* r, uint32_t n) override;
 
 private:
     Params pub_[2];
     volatile uint8_t cur_ = 0;
-    float wet_ = 0.0f;              // the wet amount the last block ended on
-    float pre_ = 1.0f, post_ = 1.0f;   // pre-gain / make-up the last block ended on
-    float hold_[2] = {}, lp_[2] = {}, dc_[2] = {};
-    uint32_t cnt_ = 0;              // frames left of the held value
-    uint8_t type_ = 0xFF;           // the type the last block ran (0xFF: none; a change crossfades)
+    Inst st_ = {};
 };
+
+// Drive as a per-instance effect (id DRIV, "Drive"): Type, Drive, Tone, Mix at
+// Bits 16 and Rate 1 (no crushing); no work memory.
+class DriveEffect final : public IEffect {
+public:
+    const char* id() const override { return "DRIV"; }
+    const char* name() const override { return "Drive"; }
+    uint32_t stateBytes() const override { return sizeof(Inst); }
+    int paramCount() const override { return 4; }
+    const EffectParam& param(int i) const override;
+    uint32_t tailFrames() const override;   // one block: the Tone low-pass / DC block settle
+    bool process(void* state, void* work, const EffectSettings& s, bool on, float* l, float* r,
+                 uint32_t n) override;
+};
+extern DriveEffect gDriveEffect;
 
 }  // namespace dirt
 }  // namespace audio

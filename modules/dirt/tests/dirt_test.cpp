@@ -434,3 +434,47 @@ TEST(dirt_golden_hash) {
     std::printf("  DIRT golden: %016llx\n", (unsigned long long)h);
     CHECK_EQ(h, uint64_t(0xbe1de5f1fce45c9dull));
 }
+
+// Drive as a per-instance effect (IEffect, id DRIV): Type, Drive, Tone, Mix, with
+// Bits 16 and Rate 1. Called the way a synth slot calls it (caller-owned zeroed
+// state, settings per block), it equals the master insert with those settings,
+// bit for bit; Off fades over one block and then leaves the bus untouched.
+TEST(dirt_drive_effect_equals_the_master_insert) {
+    IEffect& fx = dirt::gDriveEffect;
+    CHECK_STR(fx.id(), "DRIV");
+    CHECK_STR(fx.name(), "Drive");
+    CHECK_EQ(fx.paramCount(), 4);
+    CHECK(fx.stateBytes() <= kEffectStateMax);
+    CHECK_EQ(fx.workBytes(), 0u);
+    char t[16];
+    fx.valueText(0, 3, t, sizeof(t));
+    CHECK_STR(t, "Asym");
+    const EffectSettings d = effectDefaults(fx);
+    CHECK(d.v[0] == dirt::kSoft && d.v[1] == 30 && d.v[2] == 100 && d.v[3] == 100);
+    dirt::Dirt m;
+    alignas(8) uint8_t state[kEffectStateMax] = {};
+    Buf l1, r1, l2, r2;
+    tone(l1, r1, 0.6f, 120, 330.0f);
+    l2 = l1;
+    r2 = r1;
+    bool same = true;
+    for (int b = 0; b < 120; ++b) {
+        const bool onb = b < 100;
+        const uint8_t type = uint8_t((b / 20) % dirt::kTypes), drive = uint8_t(20 + (b * 7) % 80);
+        const uint8_t tn = uint8_t((b / 10) % 2 ? 100 : 60), mix = uint8_t(b < 90 ? 100 : 50);
+        dirt::Params p = on(type, drive);
+        p.on = onb;
+        p.tone = tn;
+        p.mix = mix;
+        m.setParams(p);
+        const size_t o = size_t(b) * kN;
+        m.process(l1.data() + o, r1.data() + o, kN);
+        const bool live = fx.process(state, nullptr, EffectSettings{{type, drive, tn, mix, 0, 0}}, onb, l2.data() + o,
+                                     r2.data() + o, kN);
+        same = same && live == onb;   // the fade block ends at wet 0: nothing left to play
+    }
+    CHECK(same);
+    CHECK(std::memcmp(l1.data(), l2.data(), l1.size() * sizeof(float)) == 0);
+    CHECK(std::memcmp(r1.data(), r2.data(), r1.size() * sizeof(float)) == 0);
+    CHECK(mod::ModuleHost::instance().effectById("DRIV") == &fx);
+}

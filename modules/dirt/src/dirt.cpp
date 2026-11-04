@@ -230,16 +230,19 @@ void Dirt::setParams(const Params& in) {
     __atomic_store_n(&cur_, next, __ATOMIC_RELEASE);
 }
 
-void Dirt::reset() {
-    wet_ = 0.0f;
-    pre_ = post_ = 1.0f;
-    for (int c = 0; c < 2; ++c) hold_[c] = lp_[c] = dc_[c] = 0.0f;
-    cnt_ = 0;
-    type_ = 0xFF;
+bool Dirt::process(float* l, float* r, uint32_t n) {
+    return run(st_, pub_[__atomic_load_n(&cur_, __ATOMIC_ACQUIRE)], l, r, n);
 }
 
-bool Dirt::process(float* l, float* r, uint32_t n) {
-    const Params p = pub_[__atomic_load_n(&cur_, __ATOMIC_ACQUIRE)];
+bool run(Inst& s, const Params& p, float* l, float* r, uint32_t n) {
+    if (!s.type1 && s.wet <= 0.0f) s.pre = s.post = 1.0f;   // fresh
+    float& wet_ = s.wet;
+    float& pre_ = s.pre;
+    float& post_ = s.post;
+    float* const hold_ = s.hold;
+    float* const lp_ = s.lp;
+    float* const dc_ = s.dc;
+    uint32_t& cnt_ = s.cnt;
     const float wetEnd = p.on ? float(p.mix) * 0.01f : 0.0f;
     if (wetEnd <= 0.0f && wet_ <= 0.0f) return false;   // Off (or Mix 0) and faded out: untouched
     if (!n) return false;
@@ -271,8 +274,8 @@ bool Dirt::process(float* l, float* r, uint32_t n) {
     State st{{hold_[0], hold_[1]}, {lp_[0], lp_[1]}, {dc_[0], dc_[1]}};
     const State keep = st;   // the old type's (a Type change crossfades from it)
     if (p.type != kAsym) st.dc[0] = st.dc[1] = 0.0f;   // the DC block is Asym's alone
-    const uint8_t prev = type_;
-    type_ = p.type;
+    const uint8_t prev = s.type1 ? uint8_t(s.type1 - 1) : uint8_t(0xFF);
+    s.type1 = uint8_t(p.type + 1);
     if (prev < kTypes && prev != p.type) {
         // A Type change: the old type on a copy of the block (and of the
         // state), the new one in place, crossfaded over the block.
@@ -301,8 +304,35 @@ bool Dirt::process(float* l, float* r, uint32_t n) {
     pre_ = preEnd;
     post_ = postEnd;
     wet_ = wetEnd;
-    if (wetEnd <= 0.0f) reset();   // faded out: the next On starts clean
-    return false;                  // no tail
+    if (wetEnd <= 0.0f) s = Inst{};   // faded out: the next On starts clean
+    return false;                     // no tail
+}
+
+DriveEffect gDriveEffect;
+
+uint32_t DriveEffect::tailFrames() const { return kBlock; }
+
+const EffectParam& DriveEffect::param(int i) const {
+    static const EffectParam kParams[4] = {
+        {"Type", kTypes - 1, kSoft, kTypeName},
+        {"Drive", 100, 30, nullptr},
+        {"Tone", 100, 100, nullptr},
+        {"Mix", 100, 100, nullptr},
+    };
+    return kParams[i < 0 ? 0 : (i > 3 ? 3 : i)];
+}
+
+bool DriveEffect::process(void* state, void* work, const EffectSettings& s, bool on, float* l, float* r, uint32_t n) {
+    (void)work;
+    Params p;
+    p.on = on ? 1 : 0;
+    p.type = s.v[0] < kTypes ? s.v[0] : uint8_t(kTypes - 1);
+    p.drive = s.v[1] > 100 ? 100 : s.v[1];
+    p.tone = s.v[2] > 100 ? 100 : s.v[2];
+    p.mix = s.v[3] > 100 ? 100 : s.v[3];
+    Inst& st = *static_cast<Inst*>(state);
+    run(st, p, l, r, n);
+    return on || st.wet > 0.0f;
 }
 
 }  // namespace dirt

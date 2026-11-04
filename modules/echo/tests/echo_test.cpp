@@ -380,16 +380,21 @@ TEST(echo_module_line_from_the_host_and_project_data) {
     if (!m) return;
     CHECK(h.sdramUsed() >= echo::kLine * 2u);   // the line is the host's
     CHECK(m->masterInsert() != nullptr);
-    // DIRT, then ECHO, then TAPE in the chain (profile order).
-    audio::IMasterInsert* chain[4] = {};
-    const int n = h.masterInserts(chain, 4);
+    // DIRT before ECHO (a chorus may sit between them), then TAPE (profile order).
+    audio::IMasterInsert* chain[8] = {};
+    const int n = h.masterInserts(chain, 8);
     int at = -1;
     for (int i = 0; i < n; ++i)
         if (chain[i] == m->masterInsert()) at = i;
     CHECK(at >= 0);
     const mod::IModule* dirt = h.find("DIRT");
     const mod::IModule* tape = h.find("TAPE");
-    if (dirt) CHECK(at > 0 && chain[at - 1] == const_cast<mod::IModule*>(dirt)->masterInsert());
+    if (dirt) {
+        int d = -1;
+        for (int i = 0; i < n; ++i)
+            if (chain[i] == const_cast<mod::IModule*>(dirt)->masterInsert()) d = i;
+        CHECK(d >= 0 && d < at);
+    }
     if (tape) CHECK(at + 1 < n && chain[at + 1] == const_cast<mod::IModule*>(tape)->masterInsert());
     mod::IProjectSection* sec = m->section();
     CHECK(sec != nullptr && sec->tag() == 0x4006);

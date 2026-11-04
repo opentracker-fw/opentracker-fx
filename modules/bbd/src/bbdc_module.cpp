@@ -6,6 +6,12 @@
 #include "bbdc.h"
 #include "modules/module.h"
 #include "modules/module_ui.h"
+#if __has_include("ot_profile.h")
+#include "ot_profile.h"
+#endif
+#ifndef OT_SLOT_INSERTS
+#define OT_SLOT_INSERTS 0
+#endif
 
 namespace ot {
 namespace mod {
@@ -14,14 +20,29 @@ namespace {
 
 const ModuleInfo kInfo = {"BBDC", kModuleApi, 100, "BBD chorus", kCapMasterInsert | kCapSection | kCapPage | kCapEffect, 512, 0, 0, 12000, 1};
 
+#if OT_SLOT_INSERTS
+// Images with synth slot inserts have little stack headroom left: the master
+// line lives in the SDRAM (attach()), moved into the effect window per block.
+int16_t* const gLine = nullptr;
+#else
 int16_t gLine[audio::bbdc::kLine];   // the delay line (.bss)
+#endif
 
 // Project data v1: mode, mix, width, tone, 4 reserved (8 B). Nothing is saved
 // while the effect is Off at the default settings.
 class Module final : public IModule, public IProjectSection, public IModulePage {
 public:
     const ModuleInfo& info() const override { return kInfo; }
-    bool attach(ModuleHost&) override { return true; }
+    bool attach(ModuleHost& host) override {
+#if OT_SLOT_INSERTS
+        void* line = host.sdram(uint32_t(audio::bbdc::kLine) * sizeof(int16_t));
+        if (!line) return false;
+        fx_.setSlowWork(line);
+#else
+        (void)host;
+#endif
+        return true;
+    }
     audio::IMasterInsert* masterInsert() override { return &fx_; }
     audio::IEffect* effect(int i) override { return i == 0 ? &audio::bbdc::gChorusEffect : nullptr; }
     IProjectSection* section() override { return this; }

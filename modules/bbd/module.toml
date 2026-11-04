@@ -9,9 +9,9 @@ effects = ["BBDC"]                      # per-instance effects (IModule::effect)
 sources = ["bbdc.cpp", "bbdc_module.cpp"]
 tests   = ["bbdc_test.cpp"]
 
-flash_max_bytes   = 4800              # measured 4,792 B: I+II mode +960 B, the Chorus effect +580 B
-sram_audio_bytes  = 512               # the int16 delay line
-sdram_bytes       = 0
+flash_max_bytes   = 4850              # measured 4,808 B: I+II mode +960 B, the Chorus effect +580 B, the SDRAM line +16 B
+sram_audio_bytes  = 512               # the int16 delay line (images without slot inserts)
+sdram_bytes       = 512               # the same line in the SDRAM (images with slot inserts)
 fastrun_bytes     = 0
 cpu_insn_per_unit = 12000             # one stereo block (bench: bbdc.unit ~11.1k)
 max_units         = 1

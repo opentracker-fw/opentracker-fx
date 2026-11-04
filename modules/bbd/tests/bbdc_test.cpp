@@ -371,3 +371,57 @@ TEST(bbdc_output_is_unchanged_by_the_shared_dsp) {
     std::printf("  BBDC golden %016llx\n", (unsigned long long)h);
     CHECK_EQ(h, uint64_t(0x3f55e251b73b04ddull));
 }
+
+// The chorus as a per-instance effect (IEffect): called the way a synth slot calls
+// it (caller-owned state and line, settings per block), the output is the master
+// insert's above, bit for bit; Mode offers I+II too, the master page does not.
+TEST(bbdc_effect_equals_the_master_insert) {
+    IEffect& fx = bbdc::gChorusEffect;
+    CHECK_STR(fx.id(), "BBDC");
+    CHECK_EQ(fx.paramCount(), 4);
+    CHECK_EQ(int(fx.param(0).max), 2);
+    char t[16];
+    fx.valueText(0, 2, t, sizeof(t));
+    CHECK_STR(t, "I+II");
+    fx.valueText(3, 50, t, sizeof(t));
+    CHECK_STR(t, "8.5 kHz");
+    fx.valueText(1, 80, t, sizeof(t));
+    CHECK_STR(t, "80");
+    const EffectSettings d = effectDefaults(fx);
+    CHECK(d.v[0] == 0 && d.v[1] == 100 && d.v[2] == 100 && d.v[3] == 50);
+    alignas(8) uint8_t state[kEffectStateMax] = {};
+    int16_t line[bbdc::kLine] = {};
+    CHECK(fx.stateBytes() <= sizeof(state));
+    std::vector<float> l, r;
+    noise(l, r, 400, 0.5f);
+    for (size_t i = 0; i < r.size(); ++i) r[i] = 0.7f * r[i] + 0.2f * std::sin(0.01f * float(i));
+    // The master test's steps as effect settings (mode 0 = off).
+    const uint8_t steps[5][4] = {{1, 100, 100, 50}, {2, 80, 60, 20}, {2, 100, 0, 90}, {1, 40, 100, 100}, {0, 100, 100, 50}};
+    EffectSettings s = {};
+    bool on = false;
+    for (size_t o = 0, b = 0; o < l.size(); o += kN, ++b) {
+        if (b % 80 == 0) {
+            const uint8_t* p = steps[b / 80];
+            on = p[0] != 0;
+            s = EffectSettings{{uint8_t(on ? p[0] - 1 : 0), p[1], p[2], p[3], 0, 0}};
+        }
+        fx.process(state, line, s, on, l.data() + o, r.data() + o, kN);
+    }
+    uint64_t h = 1469598103934665603ull;
+    for (const std::vector<float>* x : {&l, &r})
+        for (float v : *x) {
+            uint32_t u;
+            std::memcpy(&u, &v, 4);
+            for (int k = 0; k < 4; ++k) {
+                h ^= (u >> (8 * k)) & 0xFFu;
+                h *= 1099511628211ull;
+            }
+        }
+    CHECK_EQ(h, uint64_t(0x3f55e251b73b04ddull));
+    // The module serves it, and the master insert starts at the old defaults.
+    CHECK(mod::ModuleHost::instance().effectById("BBDC") == &fx);
+    int16_t line2[bbdc::kLine] = {};
+    const bbdc::BbdChorus m(line2);
+    const bbdc::Params p = m.params();
+    CHECK(p.mode == 0 && p.mix == 100 && p.width == 100 && p.tone == 50);
+}

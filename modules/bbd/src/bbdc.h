@@ -37,23 +37,38 @@ struct Params {
 // The BBD filters' cutoff for Tone t, Hz.
 float toneHz(uint8_t t);
 
-class BbdChorus final : public IMasterInsert {
+// The chorus as a per-instance effect (id BBDC, "Chorus"): Mode I / II / I+II,
+// Mix, Width, Tone; state bbd::State, work the kLine int16 line.
+class ChorusEffect final : public IEffect {
+public:
+    const char* id() const override { return "BBDC"; }
+    const char* name() const override { return "Chorus"; }
+    uint32_t stateBytes() const override { return sizeof(bbd::State); }
+    uint32_t workBytes() const override { return uint32_t(kLine) * sizeof(int16_t); }
+    int paramCount() const override { return 4; }
+    const EffectParam& param(int i) const override;
+    void valueText(int i, uint8_t v, char* out, int cap) const override;
+    uint32_t tailFrames() const override { return bbd::kTailFrames; }
+    bool process(void* state, void* work, const EffectSettings& s, bool on, float* l, float* r,
+                 uint32_t n) override;
+    void reset(void* state, void* work) override;
+};
+extern ChorusEffect gChorusEffect;
+
+// The master insert: one ChorusEffect instance with Params (mode 0 = off).
+class BbdChorus final : public EffectInsert {
 public:
     // line: kLine zeroed frames the effect owns (static storage, .bss: a
     // buffer inside this object would also cost its size in flash, .data).
-    constexpr explicit BbdChorus(int16_t* line) : line_(line) {}
+    constexpr explicit BbdChorus(int16_t* line)
+        : EffectInsert(gChorusEffect, &st_, line, EffectSettings{{0, Params{}.mix, Params{}.width, Params{}.tone, 0, 0}}) {}
     // Main loop: takes effect at the next block (one-block hand-over).
     void setParams(const Params& p);
-    Params params() const { return pub_[cur_]; }
+    Params params() const;
     // Tap delay of side c (0 = L, 1 = R) at the end of the last block, frames.
     float delay(int c) const { return c ? st_.dr : st_.dl; }
-    void reset();
-    bool process(float* l, float* r, uint32_t n) override;
 
 private:
-    int16_t* line_;
-    Params pub_[2] = {};
-    volatile uint8_t cur_ = 0;
     bbd::State st_ = {};
 };
 

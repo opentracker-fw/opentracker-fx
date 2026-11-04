@@ -4,11 +4,12 @@ name    = "BBD chorus"
 version = "1.0.0"
 api     = 1
 entry   = "bbdcModule"                  # ot::mod::IModule& ot::mod::bbdcModule()
-caps    = ["masterInsert", "section", "page"]
+caps    = ["masterInsert", "section", "page", "effect"]
+effects = ["BBDC"]                      # per-instance effects (IModule::effect)
 sources = ["bbdc.cpp", "bbdc_module.cpp"]
 tests   = ["bbdc_test.cpp"]
 
-flash_max_bytes   = 3400
+flash_max_bytes   = 4800              # measured 4,792 B: I+II mode +960 B, the Chorus effect +580 B
 sram_audio_bytes  = 512               # the int16 delay line
 sdram_bytes       = 0
 fastrun_bytes     = 0

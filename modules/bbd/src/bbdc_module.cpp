@@ -12,7 +12,7 @@ namespace mod {
 
 namespace {
 
-const ModuleInfo kInfo = {"BBDC", kModuleApi, 100, "BBD chorus", kCapMasterInsert | kCapSection | kCapPage, 512, 0, 0, 12000, 1};
+const ModuleInfo kInfo = {"BBDC", kModuleApi, 100, "BBD chorus", kCapMasterInsert | kCapSection | kCapPage | kCapEffect, 512, 0, 0, 12000, 1};
 
 int16_t gLine[audio::bbdc::kLine];   // the delay line (.bss)
 
@@ -23,6 +23,7 @@ public:
     const ModuleInfo& info() const override { return kInfo; }
     bool attach(ModuleHost&) override { return true; }
     audio::IMasterInsert* masterInsert() override { return &fx_; }
+    audio::IEffect* effect(int i) override { return i == 0 ? &audio::bbdc::gChorusEffect : nullptr; }
     IProjectSection* section() override { return this; }
     IModulePage* page() override { return this; }
 

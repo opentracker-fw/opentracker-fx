@@ -113,9 +113,9 @@ void fastBlock(float* __restrict l, float* __restrict r, const Common& c, State&
         } else if (F == kHard) {
             y0 = clamp1(pre * x0);
             y1 = clamp1(pre * x1);
-        } else {   // Fold: the shared shaper (flash; not the costliest type)
-            y0 = shapeAny(kFold, pre * x0);
-            y1 = shapeAny(kFold, pre * x1);
+        } else {   // Hard and Fold: the shared shaper (flash; not the costliest types)
+            y0 = shapeAny(c.type, pre * x0);
+            y1 = shapeAny(c.type, pre * x1);
         }
         if (quant) {   // mid-rise: 2^bits levels across -1..1
             y0 = quantQ31(y0, mask, half);
@@ -188,6 +188,22 @@ uint32_t holdBlock(float* __restrict l, float* __restrict r, const Common& c, St
     return cnt;
 }
 
+// Asym's DC block, followed while another type plays: every 8th input frame
+// through the Asym shaper (the pre-gain ramp included), so entering Asym
+// starts from the offset it settles on instead of 0 (a DC step: a loud click
+// at a high Drive). Runs on the input, before the block is processed.
+constexpr uint32_t kShadowStep = 8;
+__attribute__((noinline, optimize("Os"))) void shadowAsymDc(const float* l, const float* r, const Common& c, float* dc,
+                                                           uint32_t n) {
+    const float* const in[2] = {l, r};
+    for (int k = 0; k < 2; ++k) {
+        float d = dc[k], pre = c.pre;
+        for (uint32_t i = 0; i < n; i += kShadowStep, pre += c.dPre * float(kShadowStep))
+            d += kDcA * float(kShadowStep) * (shapeAny(kAsym, pre * in[k][i]) - d);
+        dc[k] = va::flush(d);
+    }
+}
+
 // One block of a type: its fields of c (the pre-gain / 3 for the tanh loop,
 // Asym's bias and DC block; at Rate > 1 the DC corner x the rate, the block
 // updating once per hold), then the loop. Returns the hold counter.
@@ -203,8 +219,7 @@ uint32_t runType(uint8_t type, float* l, float* r, Common c, State& st, uint32_t
     c.dcA = type == kAsym ? kDcA * float(c.rate) : 0.0f;
     if (hold) return holdBlock(l, r, c, st, n);
     if (tanh) fastBlock<kSoft>(l, r, c, st, n);
-    else if (type == kHard) fastBlock<kHard>(l, r, c, st, n);
-    else fastBlock<kFold>(l, r, c, st, n);
+    else fastBlock<kFold>(l, r, c, st, n);   // Hard and Fold (c.type)
     return 0;
 }
 
@@ -275,6 +290,8 @@ bool run(Inst& s, const Params& p, float* l, float* r, uint32_t n) {
     const State keep = st;   // the old type's (a Type change crossfades from it)
     if (p.type != kAsym) st.dc[0] = st.dc[1] = 0.0f;   // the DC block is Asym's alone
     const uint8_t prev = s.type1 ? uint8_t(s.type1 - 1) : uint8_t(0xFF);
+    if (p.type != kAsym) shadowAsymDc(l, r, c, s.adc, n);
+    else if (prev != kAsym) st.dc[0] = s.adc[0], st.dc[1] = s.adc[1];
     s.type1 = uint8_t(p.type + 1);
     if (prev < kTypes && prev != p.type) {
         // A Type change: the old type on a copy of the block (and of the
@@ -300,6 +317,7 @@ bool run(Inst& s, const Params& p, float* l, float* r, uint32_t n) {
         hold_[k] = st.hold[k];
         lp_[k] = st.lp[k];
         dc_[k] = st.dc[k];
+        if (p.type == kAsym) s.adc[k] = st.dc[k];   // the shadow follows the live block
     }
     pre_ = preEnd;
     post_ = postEnd;

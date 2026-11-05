@@ -256,6 +256,38 @@ TEST(dirt_leaving_asym_leaves_no_dc) {
     }
 }
 
+// Entering Asym brings no DC step: its DC block starts from the offset of
+// the shaper on the incoming block, not from zero (a user heard a loud click
+// on a Type change at a high Drive).
+TEST(dirt_entering_asym_leaves_no_dc_step) {
+    for (uint8_t from : {uint8_t(dirt::kSoft), uint8_t(dirt::kHard), uint8_t(dirt::kFold)})
+        for (uint8_t drive : {40, 100})
+            for (float amp : {0.15f, 0.5f}) {
+                dirt::Dirt d;
+                dirt::Params p = on(from, drive);
+                d.setParams(p);
+                Buf l, r;
+                const float hz = kFs / 100.0f;   // a period of exactly 100 frames
+                tone(l, r, amp, 200, hz);
+                for (int b = 0; b < 200; ++b) {
+                    if (b == 100) {
+                        p.type = dirt::kAsym;
+                        d.setParams(p);
+                    }
+                    d.process(l.data() + size_t(b) * kN, r.data() + size_t(b) * kN, kN);
+                }
+                double worst = 0.0;
+                for (size_t f = 101 * kN; f + 100 <= 160 * kN; f += 20) {   // whole periods after the switch
+                    double m = 0.0;
+                    for (size_t i = f; i < f + 100; ++i) m += l[i];
+                    worst = std::fmax(worst, std::fabs(m / 100.0));
+                }
+                if (!(worst < 0.01))
+                    std::printf("       from %d drive %d amp %.2f: DC %.4f\n", from, drive, double(amp), worst);
+                CHECK(worst < 0.01);
+            }
+}
+
 // Type and Tone (100 <-> 99: the low-pass in and out) change without a click.
 TEST(dirt_type_and_tone_changes_do_not_click) {
     dirt::Dirt d;
@@ -432,7 +464,7 @@ TEST(dirt_golden_hash) {
             }
         }
     std::printf("  DIRT golden: %016llx\n", (unsigned long long)h);
-    CHECK_EQ(h, uint64_t(0xbe1de5f1fce45c9dull));
+    CHECK_EQ(h, uint64_t(0x56c3a12883aee75full));   // entering Asym at blocks 60 and 140: no DC step
 }
 
 // Drive as a per-instance effect (IEffect, id DRIV): Type, Drive, Tone, Mix, with

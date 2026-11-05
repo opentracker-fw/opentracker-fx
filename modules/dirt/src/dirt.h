@@ -46,6 +46,7 @@ struct Inst {
     float wet;            // the wet amount the last block ended on
     float pre, post;      // pre-gain / make-up the last block ended on (fresh: 1)
     float hold[2], lp[2], dc[2];
+    float adc[2];         // Asym's DC block while another type plays (entering Asym starts from it)
     uint32_t cnt;         // frames left of the held value
     uint8_t type1;        // the type the last block ran + 1 (0: none; a change crossfades)
 };

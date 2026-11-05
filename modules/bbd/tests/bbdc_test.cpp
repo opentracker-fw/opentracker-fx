@@ -269,6 +269,36 @@ TEST(bbdc_mode_switch_ramps_the_delay) {
     CHECK(std::fabs(g.fx.delay(0) + g.fx.delay(1) - 2.0f * bbdc::kModes[1].centre) < 1e-3f);
 }
 
+// Switching on (Off -> I, II or I+II; also Mix up from 0) does not click:
+// the taps read an empty line for their first 2-5.5 ms, so the wet came in
+// with a step when they reached the signal (a user heard it on a synth
+// insert). A low sine shows it best: the largest step around the switch stays
+// within the steady signal's.
+TEST(bbdc_switching_on_does_not_click) {
+    for (uint8_t mode : {1, 2, 3})
+        for (float hz : {55.0f, 110.0f}) {
+            std::vector<float> l, r;
+            tone(l, r, 120, hz);
+            Rig g(0);
+            for (int k = 0; k < 120; ++k) {
+                if (k == 40) {
+                    bbdc::Params p = g.fx.params();
+                    p.mode = mode;
+                    g.fx.setParams(p);
+                }
+                g.fx.process(l.data() + size_t(k) * kN, r.data() + size_t(k) * kN, kN);
+            }
+            float steady = 0.0f, sw = 0.0f;
+            for (size_t i = 1; i < l.size(); ++i) {
+                const float d = std::fabs(l[i] - l[i - 1]);
+                if (i < 39 * kN || i >= 60 * kN) steady = std::fmax(steady, d);
+                else sw = std::fmax(sw, d);
+            }
+            if (!(sw < 1.5f * steady)) std::printf("       mode %d %g Hz: step %.5f, steady %.5f\n", mode, double(hz), double(sw), double(steady));
+            CHECK(sw < 1.5f * steady);
+        }
+}
+
 TEST(bbdc_off_after_on_returns_to_dry) {
     Rig g(2);
     std::vector<float> l, r;
@@ -369,7 +399,7 @@ TEST(bbdc_output_is_unchanged_by_the_shared_dsp) {
             }
         }
     std::printf("  BBDC golden %016llx\n", (unsigned long long)h);
-    CHECK_EQ(h, uint64_t(0x3f55e251b73b04ddull));
+    CHECK_EQ(h, uint64_t(0x717a39f30c9ed601ull));   // 2 blocks dry at the start: the line fills first
 }
 
 // The chorus as a per-instance effect (IEffect): called the way a synth slot calls
@@ -417,7 +447,7 @@ TEST(bbdc_effect_equals_the_master_insert) {
                 h *= 1099511628211ull;
             }
         }
-    CHECK_EQ(h, uint64_t(0x3f55e251b73b04ddull));
+    CHECK_EQ(h, uint64_t(0x717a39f30c9ed601ull));   // 2 blocks dry at the start: the line fills first
     // The module serves it, and the master insert starts at the old defaults.
     CHECK(mod::ModuleHost::instance().effectById("BBDC") == &fx);
     int16_t line2[bbdc::kLine] = {};

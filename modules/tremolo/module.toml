@@ -1,0 +1,20 @@
+# OpenTracker module manifest (core: docs/PLAN_3X.md §7.2, tools/profile.py).
+id      = "TREM"
+name    = "Tremolo"
+version = "1.0.0"
+api     = 1
+entry   = "tremoloModule"               # ot::mod::IModule& ot::mod::tremoloModule()
+caps    = ["effect"]
+effects = ["TREM"]                      # per-instance effects (IModule::effect)
+sources = ["tremolo.cpp", "tremolo_module.cpp"]
+tests   = ["tremolo_test.cpp"]
+
+flash_max_bytes   = 1600
+sram_audio_bytes  = 0                 # no buffers
+sdram_bytes       = 0
+fastrun_bytes     = 0
+cpu_insn_per_unit = 3000              # one stereo block (bench: trem.unit)
+max_units         = 3
+bench             = "trem"
+bench_sources     = ["tremolo_bench.cpp"]  # in bench/; linked into the core's audio_bench
+bench_entry       = "tremoloBench"

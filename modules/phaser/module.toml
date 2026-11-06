@@ -1,0 +1,20 @@
+# OpenTracker module manifest (core: docs/PLAN_3X.md §7.2, tools/profile.py).
+id      = "PHSR"
+name    = "Phaser"
+version = "1.0.0"
+api     = 1
+entry   = "phaserModule"                # ot::mod::IModule& ot::mod::phaserModule()
+caps    = ["effect"]
+effects = ["PHAS"]                      # per-instance effects (IModule::effect)
+sources = ["phaser.cpp", "phaser_module.cpp"]
+tests   = ["phaser_test.cpp"]
+
+flash_max_bytes   = 2800              # measured 2,763 B (Classic)
+sram_audio_bytes  = 0                 # no buffers (stage memory is the slot's work memory)
+sdram_bytes       = 0
+fastrun_bytes     = 0
+cpu_insn_per_unit = 12000             # one stereo block (bench: phas.unit)
+max_units         = 3
+bench             = "phas"
+bench_sources     = ["phaser_bench.cpp"]  # in bench/; linked into the core's audio_bench
+bench_entry       = "phaserBench"

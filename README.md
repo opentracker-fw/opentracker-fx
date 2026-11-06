@@ -11,6 +11,9 @@ original Polyend Tracker.
 | `modules/lofi` | LOFI | chip DAC / speaker master insert: Bits 4..16 with a Ladder character, a sample-and-hold Rate 32 .. 4 kHz, Speaker shapes (TV, Handheld, Monitor), Mono, Mix |
 | `modules/echo` | ECHO | tempo-synced dub echo: 1/32 .. 1/2 of the song tempo, feedback, low cut, tone, ping-pong, duck, mix; a 32 KB half-rate line in the SDRAM (`ModuleHost::sdram()`) |
 | `modules/bbd` | BBDC | classic BBD chorus: Chorus Off / I (0.5 Hz, 2.0..5.0 ms) / II (0.8 Hz, 1.5..5.5 ms), mix, width, tone |
+| `modules/phaser` | PHSR | synth slot insert (effect PHAS): Mode Classic (4 stages, 140 Hz .. 2.4 kHz, a sweep that lingers low) / 80s (8 stages, 90 Hz .. 4.2 kHz, smooth sweep), Rate 0.05..8 Hz, Depth, Feedback, Spread, Mix |
+| `modules/tremolo` | TREM | synth slot insert (effect TREM): Mode Level / Pan (constant power) / Both, Rate 0.1..20 Hz, Depth, Shape Sine / Tri / Square (2 ms edges) |
+| `modules/bitcrush` | CRSH | synth slot insert (effect CRSH): Shape Hard / Soft, Crush (16 .. 4 bits), Down (hold 1..32 frames), Mix |
 
 A build profile in the core lists modules by path relative to `MODULES_DIR`, so a profile can
 take synths from `opentracker-synths` and effects from here, for example

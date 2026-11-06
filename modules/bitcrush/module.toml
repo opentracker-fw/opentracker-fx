@@ -1,0 +1,20 @@
+# OpenTracker module manifest (core: docs/PLAN_3X.md §7.2, tools/profile.py).
+id      = "CRSH"
+name    = "Bitcrush"
+version = "1.0.0"
+api     = 1
+entry   = "bitcrushModule"              # ot::mod::IModule& ot::mod::bitcrushModule()
+caps    = ["effect"]
+effects = ["CRSH"]                      # per-instance effects (IModule::effect)
+sources = ["bitcrush.cpp", "bitcrush_module.cpp"]
+tests   = ["bitcrush_test.cpp"]
+
+flash_max_bytes   = 1600
+sram_audio_bytes  = 0                 # no buffers
+sdram_bytes       = 0
+fastrun_bytes     = 0
+cpu_insn_per_unit = 9500              # one stereo block (bench: crsh.unit, measured 9,036: Soft every frame)
+max_units         = 3
+bench             = "crsh"
+bench_sources     = ["bitcrush_bench.cpp"]  # in bench/; linked into the core's audio_bench
+bench_entry       = "bitcrushBench"
